@@ -1258,6 +1258,7 @@ static int asus_input_mapping(struct hid_device *hdev,
 		case 0xa6: asus_map_key_clear(KEY_F16);		break; /* ROG Ally QAM button */
 		case 0xa7: asus_map_key_clear(KEY_F17);		break; /* ROG Ally ROG long-press */
 		case 0xa8: asus_map_key_clear(KEY_F18);		break; /* ROG Ally ROG long-press-release */
+		case 0x9c: asus_map_key_clear(KEY_F19);		break; /* Fn+F12 screen swap */
 
 		default:
 			/* ASUS lazily declares 256 usages, ignore the rest,
@@ -1487,6 +1488,17 @@ static int asus_probe(struct hid_device *hdev, const struct hid_device_id *id)
 			is_vendor = true;
 	}
 
+	/*
+	 * Some ROG keyboard docks place the ASUS vendor collection on an
+	 * interface of its own, with no Generic Desktop or Consumer
+	 * application collection alongside it. hidinput_connect() then
+	 * declines to create an input device, so asus_input_mapping() never
+	 * runs and every hotkey is dropped by asus_event(). Force the input
+	 * connection so the vendor usages get mapped.
+	 */
+	if (is_vendor && (drvdata->quirks & QUIRK_ROG_NKEY_KEYBOARD))
+		hdev->quirks |= HID_QUIRK_HIDINPUT_FORCE;
+
 	ret = asus_worker_create(hdev, drvdata);
 	if (ret) {
 		hid_warn(hdev, "Failed to initialize worker: %d\n", ret);
@@ -1697,6 +1709,9 @@ static const struct hid_device_id asus_devices[] = {
 	    USB_DEVICE_ID_ASUSTEK_ROG_NKEY_KEYBOARD2),
 	  QUIRK_USE_KBD_BACKLIGHT | QUIRK_ROG_NKEY_KEYBOARD | QUIRK_HID_FN_LOCK },
 	{ HID_USB_DEVICE(USB_VENDOR_ID_ASUSTEK,
+	    USB_DEVICE_ID_ASUSTEK_ROG_NKEY_KEYBOARD3),
+	  QUIRK_USE_KBD_BACKLIGHT | QUIRK_ROG_NKEY_KEYBOARD },
+	{ HID_USB_DEVICE(USB_VENDOR_ID_ASUSTEK,
 	    USB_DEVICE_ID_ASUSTEK_ROG_Z13_LIGHTBAR),
 	  QUIRK_USE_KBD_BACKLIGHT | QUIRK_ROG_NKEY_KEYBOARD },
 	{ HID_USB_DEVICE(USB_VENDOR_ID_ASUSTEK,
@@ -1734,6 +1749,9 @@ static const struct hid_device_id asus_devices[] = {
 	{ HID_DEVICE(BUS_USB, HID_GROUP_GENERIC,
 		USB_VENDOR_ID_ASUSTEK, USB_DEVICE_ID_ASUSTEK_ROG_Z13_FOLIO),
 	  QUIRK_USE_KBD_BACKLIGHT | QUIRK_ROG_NKEY_KEYBOARD },
+	{ HID_DEVICE(BUS_BLUETOOTH, HID_GROUP_GENERIC,
+		USB_VENDOR_ID_ASUSTEK, USB_DEVICE_ID_ASUSTEK_ROG_NKEY_KEYBOARD3_BT),
+		QUIRK_USE_KBD_BACKLIGHT | QUIRK_ROG_NKEY_KEYBOARD },
 	{ HID_DEVICE(BUS_USB, HID_GROUP_GENERIC,
 		USB_VENDOR_ID_ASUSTEK, USB_DEVICE_ID_ASUSTEK_T101HA_KEYBOARD) },
 	{ }
